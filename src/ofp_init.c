@@ -272,7 +272,7 @@ void ofp_init_global_param_from_file(ofp_global_param_t *params, const char *fil
 {
 	memset(params, 0, sizeof(*params));
 	params->pktin_mode = ODP_PKTIN_MODE_SCHED;
-	params->pktout_mode = ODP_PKTIN_MODE_DIRECT;
+	params->pktout_mode = ODP_PKTOUT_MODE_DIRECT;
 	params->sched_sync = ODP_SCHED_SYNC_ATOMIC;
 	params->sched_group = ODP_SCHED_GROUP_ALL;
 #ifdef SP
@@ -422,8 +422,10 @@ int ofp_init_global(odp_instance_t instance, ofp_global_param_t *params)
 	int i;
 	odp_pktio_param_t pktio_param;
 	odp_pktin_queue_param_t pktin_param;
+	odph_thread_common_param_t thd_common_param;
 
 	ofp_init_global_called = 1;
+	odph_thread_common_param_init(&thd_common_param);
 
 #if ODP_VERSION_API_GENERATION >= 1 && ODP_VERSION_API_MAJOR >= 21
 	odp_schedule_config(NULL);
@@ -434,6 +436,7 @@ int ofp_init_global(odp_instance_t instance, ofp_global_param_t *params)
 	/* cpu mask for slow path threads */
 	odp_cpumask_zero(&cpumask);
 	odp_cpumask_set(&cpumask, params->linux_core_id);
+	thd_common_param.cpumask = &cpumask;
 
 	OFP_INFO("Slow path threads on core %d", odp_cpumask_first(&cpumask));
 
@@ -454,15 +457,16 @@ int ofp_init_global(odp_instance_t instance, ofp_global_param_t *params)
 
 #ifdef SP
 	if (params->enable_nl_thread) {
-		odph_odpthread_params_t thr_params;
+		odph_thread_param_t thr_params;
 
 		/* Start Netlink server process */
 		thr_params.start = START_NL_SERVER;
 		thr_params.arg = NULL;
 		thr_params.thr_type = ODP_THREAD_CONTROL;
-		thr_params.instance = instance;
-		if (!odph_odpthreads_create(&shm->nl_thread, &cpumask,
-					    &thr_params)) {
+
+		if (!odph_thread_create(&shm->nl_thread, &thd_common_param,
+					    &thr_params,
+						1)) {
 			OFP_ERR("Failed to start Netlink thread.");
 			return -1;
 		}
@@ -520,7 +524,7 @@ int ofp_term_global(void)
 #ifdef SP
 	/* Terminate Netlink thread*/
 	if (shm->nl_thread_is_running) {
-		odph_odpthreads_join(&shm->nl_thread);
+		odph_thread_join(&shm->nl_thread, 1);
 		shm->nl_thread_is_running = 0;
 	}
 #endif /* SP */
@@ -544,8 +548,8 @@ int ofp_term_global(void)
 
 		CHECK_ERROR(odp_pktio_stop(ifnet->pktio), rc);
 #ifdef SP
-		odph_odpthreads_join(ifnet->rx_tbl);
-		odph_odpthreads_join(ifnet->tx_tbl);
+		odph_thread_join(ifnet->rx_tbl, 1);
+		odph_thread_join(ifnet->tx_tbl, 1);
 		close(ifnet->fd);
 		ifnet->fd = -1;
 #endif /*SP*/

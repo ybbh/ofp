@@ -274,7 +274,7 @@ int ofp_sp_inq_create(struct ofp_ifnet *ifnet)
 }
 #endif /*SP*/
 
-int ofp_ifnet_create(odp_instance_t instance,
+int ofp_ifnet_create(odp_instance_t ,
 	char *if_name,
 	odp_pktio_param_t *pktio_param,
 	odp_pktin_queue_param_t *pktin_param,
@@ -286,10 +286,11 @@ int ofp_ifnet_create(odp_instance_t instance,
 	odp_pktin_queue_param_t pktin_param_local;
 	odp_pktout_queue_param_t pktout_param_local;
 #ifdef SP
-	odph_odpthread_params_t thr_params;
+	odph_thread_param_t thr_params;
+	odph_thread_common_param_t thr_common_param;
 #endif /* SP */
 
-	(void)instance;
+	//(void)instance;
 
 	port = ofp_free_port_alloc();
 	ifnet = ofp_get_ifnet((uint16_t)port, 0);
@@ -395,22 +396,27 @@ int ofp_ifnet_create(odp_instance_t instance,
 
 #ifdef SP
 	/* Start VIF slowpath receiver thread */
+	odph_thread_param_init(&thr_params);
 	thr_params.start = sp_rx_thread;
 	thr_params.arg = ifnet;
 	thr_params.thr_type = ODP_THREAD_CONTROL;
-	thr_params.instance = instance;
-	odph_odpthreads_create(ifnet->rx_tbl,
-			       &cpumask,
-			       &thr_params);
+	odph_thread_common_param_init(&thr_common_param);
+	thr_common_param.cpumask = &cpumask;
+	odph_thread_create(ifnet->rx_tbl,
+			       &thr_common_param,
+			       &thr_params,
+				   1);
 
 	/* Start VIF slowpath transmitter thread */
 	thr_params.start = sp_tx_thread;
 	thr_params.arg = ifnet;
 	thr_params.thr_type = ODP_THREAD_CONTROL;
-	thr_params.instance = instance;
-	odph_odpthreads_create(ifnet->tx_tbl,
-			       &cpumask,
-			       &thr_params);
+	odph_thread_common_param_init(&thr_common_param);
+	thr_common_param.cpumask = &cpumask;
+	odph_thread_create(ifnet->tx_tbl,
+			       &thr_common_param,
+			       &thr_params,
+				   1);
 #endif /* SP */
 
 	return 0;

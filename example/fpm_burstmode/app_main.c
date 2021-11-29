@@ -214,12 +214,13 @@ static int configure_workers_arg(int num_workers,
  */
 int main(int argc, char *argv[])
 {
-	odph_odpthread_t thread_tbl[MAX_WORKERS];
+	odph_thread_t thread_tbl[MAX_WORKERS];
 	struct worker_arg workers_arg[MAX_WORKERS];
 	appl_args_t params;
 	int num_workers, first_worker, linux_sp_core, i;
 	odp_cpumask_t cpu_mask;
-	odph_odpthread_params_t thr_params;
+	odph_thread_common_param_t thr_common_param;
+	odph_thread_param_t thr_params[MAX_WORKERS];
 	odp_instance_t instance;
 
 	/* Parse and store the application arguments */
@@ -290,24 +291,24 @@ int main(int argc, char *argv[])
 	memset(thread_tbl, 0, sizeof(thread_tbl));
 
 	/* Create worker threads */
+	odp_cpumask_zero(&cpu_mask);
 	for (i = 0; i < num_workers; ++i) {
-		thr_params.start = pkt_io_recv;
-		thr_params.arg = &workers_arg[i];
-		thr_params.thr_type = ODP_THREAD_WORKER;
-		thr_params.instance = instance;
-
-		odp_cpumask_zero(&cpu_mask);
+		odph_thread_param_init(&thr_params[i]);
+		thr_params[i].start = pkt_io_recv;
+		thr_params[i].arg = &workers_arg[i];
+		thr_params[i].thr_type = ODP_THREAD_WORKER;
 		odp_cpumask_set(&cpu_mask, first_worker + i);
-
-		odph_odpthreads_create(&thread_tbl[i], &cpu_mask,
-				       &thr_params);
 	}
+	odph_thread_common_param_init(&thr_common_param);
+	thr_common_param.cpumask = & cpu_mask;
+	odph_thread_create(thread_tbl, &thr_common_param,
+				       thr_params, num_workers);
 
 	/* Start CLI */
 	ofp_start_cli_thread(instance, app_init_params.linux_core_id,
 			     params.cli_file);
 
-	odph_odpthreads_join(thread_tbl);
+	odph_thread_join(thread_tbl, num_workers);
 	printf("End Main()\n");
 
 	return 0;

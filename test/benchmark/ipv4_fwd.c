@@ -414,21 +414,21 @@ int main(int argc, char *argv[])
 	memset(tstate, 0, sizeof(tstate));
 	odp_spinlock_init(&lock);
 
-	odph_odpthread_t thread_tbl[ODP_THREAD_COUNT_MAX];
+	odph_thread_t thread_tbl[ODP_THREAD_COUNT_MAX];
 	memset(thread_tbl, 0, sizeof(thread_tbl));
 
 	for (i = 0; i < arg.workers; ++i) {
-		odph_odpthread_params_t thr_params;
+		odph_thread_param_t thr_params;
 		memset(&thr_params, 0, sizeof(thr_params));
 		thr_params.start = worker;
 		thr_params.thr_type = ODP_THREAD_WORKER;
-		thr_params.instance = instance;
-
 		odp_cpumask_t cpu_mask;
 		odp_cpumask_zero(&cpu_mask);
 		odp_cpumask_set(&cpu_mask, i);
-
-		ASSERT(odph_odpthreads_create(&thread_tbl[i], &cpu_mask, &thr_params));
+		odph_thread_common_param_t thr_common_param;
+		odph_thread_common_param_init(&thr_common_param);
+		thr_common_param.cpumask = &cpumask;
+		ASSERT(odph_thread_create(&thread_tbl[i], &thr_common_param, &thr_params, 1));
 	}
 
 	sleep(arg.warmup);
@@ -474,7 +474,7 @@ int main(int argc, char *argv[])
 
 	for (i = 0; i < arg.workers; ++i) tstate[i].stop = 1;
 
-	odph_odpthreads_join(thread_tbl);
+	odph_thread_join(thread_tbl, arg.workers);
 
 	for (i = 0; i < arg.workers; ++i)
 		ASSERT(!odp_queue_destroy(ifnet->out_queue_queue[i]));

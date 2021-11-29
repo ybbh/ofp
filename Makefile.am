@@ -1,6 +1,7 @@
 ACLOCAL_AMFLAGS=-I m4
 AUTOMAKE_OPTIONS = foreign
 SUBDIRS = scripts src example test
+VPATH = $(abs_srcdir)
 
 include_HEADERS = \
 		$(top_srcdir)/include/api/ofp.h \

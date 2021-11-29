@@ -110,7 +110,10 @@ _ofp_in6_cksum_pseudo(struct ofp_ip6_hdr *ip6, uint32_t len,
 
 	/* IPv6 source address. */
 	scope = ofp_in6_getscope(&ip6->ip6_src);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
 	w = (uint16_t *)&ip6->ip6_src;
+
 	sum += w[0]; sum += w[1]; sum += w[2]; sum += w[3];
 	sum += w[4]; sum += w[5]; sum += w[6]; sum += w[7];
 	if (scope != 0)
@@ -118,7 +121,9 @@ _ofp_in6_cksum_pseudo(struct ofp_ip6_hdr *ip6, uint32_t len,
 
 	/* IPv6 destination address. */
 	scope = ofp_in6_getscope(&ip6->ip6_dst);
+
 	w = (uint16_t *)&ip6->ip6_dst;
+#pragma GCC diagnostic pop
 	sum += w[0]; sum += w[1]; sum += w[2]; sum += w[3];
 	sum += w[4]; sum += w[5]; sum += w[6]; sum += w[7];
 	if (scope != 0)

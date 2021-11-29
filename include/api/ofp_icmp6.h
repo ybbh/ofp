@@ -88,6 +88,17 @@ struct ofp_icmp6_hdr {
 	} icmp6_dataun;
 } __attribute__((packed));
 
+struct ofp_icmp6_hdr32 {
+	uint8_t	icmp6_type;	/* type field */
+	uint8_t	icmp6_code;	/* code field */
+	uint16_t	icmp6_cksum;	/* checksum field */
+	union {
+		uint32_t	icmp6_un_data32[1]; /* type-specific field */
+		uint16_t	icmp6_un_data16[2]; /* type-specific field */
+		uint8_t	icmp6_un_data8[28];  /* type-specific field */
+	} icmp6_dataun;
+} __attribute__((packed));
+
 #define ofp_icmp6_data32	icmp6_dataun.icmp6_un_data32
 #define ofp_icmp6_data16	icmp6_dataun.icmp6_un_data16
 #define ofp_icmp6_data8	icmp6_dataun.icmp6_un_data8

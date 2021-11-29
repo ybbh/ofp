@@ -337,18 +337,23 @@ static int webserver(void *arg)
 
 void ofp_start_webserver_thread(odp_instance_t instance, int core_id)
 {
-	static odph_odpthread_t test_linux_webserver_pthread;
+	static odph_thread_t test_linux_webserver_pthread;
 	odp_cpumask_t cpumask;
-	odph_odpthread_params_t thr_params;
+	odph_thread_param_t thr_params;
+	odph_thread_common_param_t thr_common_param;
 
 	odp_cpumask_zero(&cpumask);
 	odp_cpumask_set(&cpumask, core_id);
-
+	
+	odph_thread_common_param_init(&thr_common_param);
+	thr_common_param.cpumask = &cpumask;
+	
 	thr_params.start = webserver;
 	thr_params.arg = NULL;
 	thr_params.thr_type = ODP_THREAD_CONTROL;
-	thr_params.instance = instance;
-	odph_odpthreads_create(&test_linux_webserver_pthread,
-			       &cpumask,
-			       &thr_params);
+	thr_params._deprecated_instance = instance;
+	odph_thread_create(&test_linux_webserver_pthread,
+			       &thr_common_param,
+			       &thr_params,
+				   1);
 }

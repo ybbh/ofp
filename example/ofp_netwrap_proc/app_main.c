@@ -57,7 +57,7 @@ enum netwrap_state_enum {
 };
 
 static enum netwrap_state_enum netwrap_state;
-static odph_odpthread_t thread_tbl[MAX_WORKERS];
+static odph_thread_t thread_tbl[MAX_WORKERS];
 static int num_workers;
 odp_instance_t netwrap_proc_instance;
 
@@ -69,7 +69,8 @@ __attribute__((constructor)) static void ofp_netwrap_main_ctor(void)
 	int core_count, ret_val;
 	odp_cpumask_t cpumask;
 	char cpumaskstr[64];
-	odph_odpthread_params_t thr_params;
+	odph_thread_common_param_t thr_common_param;
+	odph_thread_param_t thr_params[MAX_WORKERS];
 
 	memset(&params, 0, sizeof(params));
 	if (parse_env(&params) != EXIT_SUCCESS)
@@ -179,14 +180,19 @@ __attribute__((constructor)) static void ofp_netwrap_main_ctor(void)
 	 * If different dispatchers should run, or the same be run with differnt
 	 * input arguments, the cpumask is used to control this.
 	 */
+	odph_thread_common_param_init(&thr_common_param);
+	thr_common_param.cpumask = &cpumask;
 	memset(thread_tbl, 0, sizeof(thread_tbl));
-	thr_params.start = default_event_dispatcher;
-	thr_params.arg = ofp_eth_vlan_processing;
-	thr_params.thr_type = ODP_THREAD_WORKER;
-	thr_params.instance = netwrap_proc_instance;
-	ret_val = odph_odpthreads_create(thread_tbl,
-					 &cpumask,
-					 &thr_params);
+	for (int i = 0; i < num_workers; i++) {
+		odph_thread_param_init(&thr_params[i]);
+		thr_params[i].start = default_event_dispatcher;
+		thr_params[i].arg = ofp_eth_vlan_processing;
+		thr_params[i].thr_type = ODP_THREAD_WORKER;
+	}
+	ret_val = odph_thread_create(thread_tbl,
+					 &thr_common_param,
+					 thr_params,
+					 num_workers);
 	if (ret_val != num_workers) {
 		OFP_ERR("Error: Failed to create worker threads, "
 			"expected %d, got %d",
@@ -227,7 +233,7 @@ static void ofp_netwrap_main_dtor(void)
 	 * Wait here until all worker threads have terminated, then free up all
 	 * resources allocated by odp_init_global().
 	 */
-		odph_odpthreads_join(thread_tbl);
+		odph_thread_join(thread_tbl, num_workers);
 		/* fall through */
 	case NETWRAP_OFP_INIT_LOCAL:
 		if (ofp_term_local() < 0)

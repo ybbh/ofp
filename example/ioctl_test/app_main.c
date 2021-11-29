@@ -126,12 +126,13 @@ static int app_dispatcher_thread(void *arg)
 
 int main(int argc, char *argv[])
 {
-	odph_odpthread_t thread_tbl[MAX_WORKERS];
+	odph_thread_t thread_tbl[MAX_WORKERS];
 	appl_args_t params;
 	int core_count, num_workers;
 	odp_cpumask_t cpumask;
 	char cpumaskstr[64];
-	odph_odpthread_params_t thr_params;
+	odph_thread_param_t thr_params[MAX_WORKERS];
+	odph_thread_common_param_t thr_common_param;
 	odp_instance_t instance;
 
 	struct rlimit rlp;
@@ -190,13 +191,18 @@ int main(int argc, char *argv[])
 	memset(thread_tbl, 0, sizeof(thread_tbl));
 	/* Start dataplane dispatcher worker threads */
 
-	thr_params.start = app_dispatcher_thread;
-	thr_params.arg = NULL;
-	thr_params.thr_type = ODP_THREAD_WORKER;
-	thr_params.instance = instance;
-	odph_odpthreads_create(thread_tbl,
-			       &cpumask,
-			       &thr_params);
+	for (int i = 0; i < num_workers; i++) {
+		odph_thread_param_init(&thr_params[i]);
+		thr_params[i].start = app_dispatcher_thread;
+		thr_params[i].arg = NULL;
+		thr_params[i].thr_type = ODP_THREAD_WORKER;
+	}
+	odph_thread_common_param_init(&thr_common_param);
+	thr_common_param.cpumask = &cpumask;
+	odph_thread_create(thread_tbl,
+			       &thr_common_param,
+			       thr_params,
+				   num_workers);
 
 	/* other app code here.*/
 	/* Start CLI */
@@ -206,7 +212,7 @@ int main(int argc, char *argv[])
 	/* ioctl test thread */
 	ofp_start_ioctl_thread(instance, app_init_params.linux_core_id);
 
-	odph_odpthreads_join(thread_tbl);
+	odph_thread_join(thread_tbl, num_workers);
 	printf("End Main()\n");
 
 	return 0;

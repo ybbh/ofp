@@ -20,7 +20,7 @@ void ofp_nd6_ns_input(odp_packet_t m, int off, int icmp6len)
 {
 	struct ofp_ether_header *eth;
 	struct ofp_ip6_hdr *ip6;
-	struct ofp_icmp6_hdr *icmp6;
+	struct ofp_icmp6_hdr32 *icmp6;
 	struct ofp_ifnet *ifp;
 
 	(void)icmp6len;
@@ -28,7 +28,7 @@ void ofp_nd6_ns_input(odp_packet_t m, int off, int icmp6len)
 	ifp = odp_packet_user_ptr(m);
 	eth = (struct ofp_ether_header *) odp_packet_l2_ptr(m, NULL);
 	ip6 = (struct ofp_ip6_hdr *)odp_packet_l3_ptr(m, NULL);
-	icmp6 = (struct ofp_icmp6_hdr *)((uint8_t *)ip6 + off);
+	icmp6 = (struct ofp_icmp6_hdr32 *)((uint8_t *)ip6 + off);
 
 	if (icmp6->ofp_icmp6_data8[20] == OFP_ND_OPT_SOURCE_LINKADDR &&
 		!OFP_IN6_IS_ADDR_UNSPECIFIED(&ip6->ip6_src) &&
@@ -53,7 +53,7 @@ enum ofp_return_code ofp_nd6_ns_output(struct ofp_ifnet *dev,
 	struct ofp_ether_header *e1;
 	struct ofp_ether_vlan_header *e2;
 	struct ofp_ip6_hdr *ip6hdr;
-	struct ofp_icmp6_hdr *icmp;
+	struct ofp_icmp6_hdr32 *icmp;
 	odp_packet_t pkt;
 
 	if (dev->vlan)
@@ -117,7 +117,7 @@ enum ofp_return_code ofp_nd6_ns_output(struct ofp_ifnet *dev,
 	}
 
 	odp_packet_l4_offset_set(pkt, iter);
-	icmp = (struct ofp_icmp6_hdr *)odp_packet_l4_ptr(pkt, NULL);
+	icmp = (struct ofp_icmp6_hdr32 *)odp_packet_l4_ptr(pkt, NULL);
 	iter += sizeof(*icmp) + 8 /* option */;
 
 	icmp->icmp6_type = OFP_ND_NEIGHBOR_SOLICIT;
@@ -150,7 +150,7 @@ void ofp_nd6_na_input(odp_packet_t m, int off, int icmp6len)
 {
 	struct ofp_ether_header *eth;
 	struct ofp_ip6_hdr *ip6;
-	struct ofp_icmp6_hdr *icmp6;
+	struct ofp_icmp6_hdr32 *icmp6;
 	struct ofp_ifnet *ifp;
 
 	(void)icmp6len;
@@ -158,7 +158,7 @@ void ofp_nd6_na_input(odp_packet_t m, int off, int icmp6len)
 	ifp = odp_packet_user_ptr(m);
 	eth = (struct ofp_ether_header *) odp_packet_l2_ptr(m, NULL);
 	ip6 = (struct ofp_ip6_hdr *)odp_packet_l3_ptr(m, NULL);
-	icmp6 = (struct ofp_icmp6_hdr *)((uint8_t *)ip6 + off);
+	icmp6 = (struct ofp_icmp6_hdr32 *)((uint8_t *)ip6 + off);
 
 	if (icmp6->ofp_icmp6_data8[20] == OFP_ND_OPT_TARGET_LINKADDR) {
 		ofp_set_route6_params(OFP_ROUTE6_ADD, 0 /*vrf*/, ifp->vlan,
@@ -181,7 +181,7 @@ enum ofp_return_code ofp_nd6_na_output(struct ofp_ifnet *dev,
 	struct ofp_ether_header *e1;
 	struct ofp_ether_vlan_header *e2;
 	struct ofp_ip6_hdr *ip6hdr;
-	struct ofp_icmp6_hdr *icmp;
+	struct ofp_icmp6_hdr32 *icmp;
 	odp_packet_t pkt;
 
 	if (dev->vlan)
@@ -245,7 +245,7 @@ enum ofp_return_code ofp_nd6_na_output(struct ofp_ifnet *dev,
 	memcpy(ip6hdr->ip6_src.ofp_s6_addr, dev->ip6_addr, 16);
 
 	odp_packet_l4_offset_set(pkt, iter);
-	icmp = (struct ofp_icmp6_hdr *)odp_packet_l4_ptr(pkt, NULL);
+	icmp = (struct ofp_icmp6_hdr32 *)odp_packet_l4_ptr(pkt, NULL);
 	iter += sizeof(*icmp) + 8 /* option */;
 
 	icmp->icmp6_type = OFP_ND_NEIGHBOR_ADVERT;
@@ -258,7 +258,7 @@ enum ofp_return_code ofp_nd6_na_output(struct ofp_ifnet *dev,
 	/* Option: Source link-layer address */
 	icmp->ofp_icmp6_data8[20] = OFP_ND_OPT_TARGET_LINKADDR;
 	icmp->ofp_icmp6_data8[21] = 1; /* 8 octets */
-	memcpy(&icmp->ofp_icmp6_data8[22], dev->mac, 6);
+	memcpy(icmp->ofp_icmp6_data8 + 22, dev->mac, 6);
 
 	icmp->icmp6_cksum = ofp_cksum_buffer(&ip6hdr->ofp_ip6_plen, 68);
 

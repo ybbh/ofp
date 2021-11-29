@@ -446,7 +446,6 @@ ofp_tcpip_fillheaders(struct inpcb *inp, void *ip_ptr, void *tcp_ptr)
 #ifdef INET6
 	if ((inp->inp_vflag & INP_IPV6) != 0) {
 		struct ofp_ip6_hdr *ip6;
-
 		ip6 = (struct ofp_ip6_hdr *)ip_ptr;
 		ip6->ofp_ip6_flow = (ip6->ofp_ip6_flow & ~OFP_IPV6_FLOWINFO_MASK) |
 			(inp->inp_flow & OFP_IPV6_FLOWINFO_MASK);

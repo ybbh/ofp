@@ -104,12 +104,15 @@ struct ofp_ip6_hdr {
 	struct ofp_in6_addr ip6_dst;	/* destination address */
 } __attribute__((packed));
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #define ofp_ip6_vfc		ip6_ctlun.ip6_un2_vfc
 #define ofp_ip6_flow	ip6_ctlun.ip6_un1.ip6_un1_flow
 #define ofp_ip6_plen	ip6_ctlun.ip6_un1.ip6_un1_plen
 #define ofp_ip6_nxt		ip6_ctlun.ip6_un1.ip6_un1_nxt
 #define ofp_ip6_hlim	ip6_ctlun.ip6_un1.ip6_un1_hlim
 #define ofp_ip6_hops	ip6_ctlun.ip6_un1.ip6_un1_hlim
+#pragma GCC diagnostic pop
 
 #define OFP_IPV6_VERSION		0x60
 #define OFP_IPV6_VERSION_MASK		0xf0

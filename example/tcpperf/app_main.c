@@ -980,7 +980,7 @@ static void print_info(char *progname, appl_args_t *appl_args)
  */
 int main(int argc, char *argv[])
 {
-	odph_odpthread_t thread_tbl[NUM_WORKERS];
+	odph_thread_t thread_tbl[NUM_WORKERS];
 	odp_shm_t shm;
 	int num_workers, next_worker;
 	odp_cpumask_t cpu_mask;
@@ -988,7 +988,8 @@ int main(int argc, char *argv[])
 	odp_pktio_param_t pktio_param;
 	odp_pktin_queue_param_t pktin_param;
 	odp_pktout_queue_param_t pktout_param;
-	odph_odpthread_params_t thr_params;
+	odph_thread_common_param_t thr_common_param;
+	odph_thread_param_t thr_params;
 	odp_instance_t instance;
 	odp_pktio_t pktio;
 	odp_pktio_capability_t capa;
@@ -1140,10 +1141,11 @@ int main(int argc, char *argv[])
 			thr_params.start = run_server;
 		thr_params.arg = &thr_args;
 		thr_params.thr_type = ODP_THREAD_WORKER;
-		thr_params.instance = instance;
 		odp_cpumask_zero(&cpu_mask);
 		odp_cpumask_set(&cpu_mask, next_worker);
-		odph_odpthreads_create(&thread_tbl[0], &cpu_mask, &thr_params);
+		odph_thread_common_param_init(&thr_common_param);
+		thr_common_param.cpumask = &cpu_mask;
+		odph_thread_create(&thread_tbl[0], &thr_common_param, &thr_params, 1);
 		next_worker++;
 	}
 
@@ -1157,14 +1159,16 @@ int main(int argc, char *argv[])
 	}
 	thr_params.arg = &thr_args;
 	thr_params.thr_type = ODP_THREAD_WORKER;
-	thr_params.instance = instance;
+
 	odp_cpumask_zero(&cpu_mask);
 	odp_cpumask_set(&cpu_mask, next_worker);
-	odph_odpthreads_create(&thread_tbl[next_worker-1], &cpu_mask, &thr_params);
+	odph_thread_common_param_init(&thr_common_param);
+	thr_common_param.cpumask = &cpu_mask;
+	odph_thread_create(&thread_tbl[next_worker-1], &thr_common_param, &thr_params, 1);
 
 	print_global_stats();
 
-	odph_odpthreads_join(thread_tbl);
+	odph_thread_join(thread_tbl, num_workers);
 
 	if (gbl_args->client_fd >= 0)
 		ofp_close(gbl_args->client_fd);

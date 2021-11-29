@@ -96,12 +96,13 @@ static void ofp_sig_func_stop(int signum)
  */
 int main(int argc, char *argv[])
 {
-	odph_odpthread_t thread_tbl[MAX_WORKERS];
+	odph_thread_t thread_tbl[MAX_WORKERS];
 	appl_args_t params;
 	int core_count, num_workers, ret_val;
 	odp_cpumask_t cpumask;
 	char cpumaskstr[64];
-	odph_odpthread_params_t thr_params;
+	odph_thread_common_param_t thr_common_param;
+	odph_thread_param_t thr_params[MAX_WORKERS];
 	odp_instance_t instance;
 
 	/* Parse and store the application arguments */
@@ -256,19 +257,25 @@ int main(int argc, char *argv[])
 	 * input arguments, the cpumask is used to control this.
 	 */
 	memset(thread_tbl, 0, sizeof(thread_tbl));
-	thr_params.start = default_event_dispatcher;
-	thr_params.arg = ofp_eth_vlan_processing;
-	thr_params.thr_type = ODP_THREAD_WORKER;
-	thr_params.instance = instance;
-	ret_val = odph_odpthreads_create(thread_tbl,
-					 &cpumask,
-					 &thr_params);
+	for (int i = 0; i < num_workers; i++) {
+		odph_thread_param_init(&thr_params[i]);
+		thr_params[i].start = default_event_dispatcher;
+		thr_params[i].arg = ofp_eth_vlan_processing;
+		thr_params[i].thr_type = ODP_THREAD_WORKER;
+	}
+	odph_thread_common_param_init(&thr_common_param);
+	thr_common_param.cpumask = &cpumask;
+
+	ret_val = odph_thread_create(thread_tbl,
+					 &thr_common_param,
+					 thr_params,
+					 num_workers);
 	if (ret_val != num_workers) {
 		OFP_ERR("Error: Failed to create worker threads, "
 			"expected %d, got %d",
 			num_workers, ret_val);
 		ofp_stop_processing();
-		odph_odpthreads_join(thread_tbl);
+		odph_thread_join(thread_tbl, num_workers);
 		ofp_term_local();
 		ofp_term_global();
 		odp_term_local();
@@ -286,7 +293,7 @@ int main(int argc, char *argv[])
 		params.cli_file) < 0) {
 		OFP_ERR("Error: Failed to init CLI thread");
 		ofp_stop_processing();
-		odph_odpthreads_join(thread_tbl);
+		odph_thread_join(thread_tbl, num_workers);
 		ofp_term_local();
 		ofp_term_global();
 		odp_term_local();
@@ -305,7 +312,7 @@ int main(int argc, char *argv[])
 			app_init_params.linux_core_id) <= 0) {
 			OFP_ERR("Error: Failed to init performance monitor");
 			ofp_stop_processing();
-			odph_odpthreads_join(thread_tbl);
+			odph_thread_join(thread_tbl, num_workers);
 			ofp_term_local();
 			ofp_term_global();
 			odp_term_local();
@@ -318,7 +325,7 @@ int main(int argc, char *argv[])
 	 * Wait here until all worker threads have terminated, then free up all
 	 * resources allocated by odp_init_global().
 	 */
-	odph_odpthreads_join(thread_tbl);
+	odph_thread_join(thread_tbl, num_workers);
 
 	if (ofp_term_local() < 0)
 		printf("Error: ofp_term_local failed\n");
@@ -532,18 +539,23 @@ static int perf_client(void *arg)
 
 static int start_performance(odp_instance_t instance, int core_id)
 {
-	odph_odpthread_t cli_linux_pthread;
+	odph_thread_t cli_linux_pthread;
 	odp_cpumask_t cpumask;
-	odph_odpthread_params_t thr_params;
+	odph_thread_param_t thr_params;
+	odph_thread_common_param_t thr_common_param;
 
 	odp_cpumask_zero(&cpumask);
 	odp_cpumask_set(&cpumask, core_id);
 
+	odph_thread_common_param_init(&thr_common_param);
+	thr_common_param.cpumask = &cpumask;
+
 	thr_params.start = perf_client;
 	thr_params.arg = NULL;
 	thr_params.thr_type = ODP_THREAD_CONTROL;
-	thr_params.instance = instance;
-	return odph_odpthreads_create(&cli_linux_pthread,
-				      &cpumask, &thr_params);
+	thr_params._deprecated_instance = instance;
+	//thr_params.instance = instance;
+	return odph_thread_create(&cli_linux_pthread,
+				      &thr_common_param, &thr_params, 1);
 
 }

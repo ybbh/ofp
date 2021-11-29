@@ -92,7 +92,7 @@ struct ofp_in6_addr {
 		uint16_t	__u6_addr16[8];
 		uint32_t	__u6_addr32[4];
 	} __u6_addr;			/* 128-bit IP6 address */
-};
+} __attribute__((packed));
 
 #define ofp_s6_addr   __u6_addr.__u6_addr8
 #define ofp_s6_addr16 __u6_addr.__u6_addr16

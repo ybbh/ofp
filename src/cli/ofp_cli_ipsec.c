@@ -214,7 +214,10 @@ static void cmd_sat_add(struct cli_conn *conn, const char *s)
 		return;
 	}
 	memset(sat, 0, sizeof(*sat));
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-truncation"
 	strncpy(sat->name, name, sizeof(sat->name));
+#pragma GCC diagnostic pop	
 	sat->name[sizeof(sat->name) - 1] = 0;
 	sat->allocated = 1;
 	sendcrlf(conn);
@@ -240,7 +243,10 @@ static void cmd_spt_add(struct cli_conn *conn, const char *s)
 		return;
 	}
 	memset(spt, 0, sizeof(*spt));
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-truncation"
 	strncpy(spt->name, name, sizeof(spt->name));
+#pragma GCC diagnostic pop
 	spt->name[sizeof(spt->name) - 1] = 0;
 	spt->allocated = 1;
 	sendcrlf(conn);
