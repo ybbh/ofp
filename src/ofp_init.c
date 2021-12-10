@@ -458,7 +458,7 @@ int ofp_init_global(odp_instance_t instance, ofp_global_param_t *params)
 #ifdef SP
 	if (params->enable_nl_thread) {
 		odph_thread_param_t thr_params;
-
+		odph_thread_param_init(&thr_params);
 		/* Start Netlink server process */
 		thr_params.start = START_NL_SERVER;
 		thr_params.arg = NULL;
